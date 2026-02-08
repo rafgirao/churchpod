@@ -1,0 +1,13 @@
+#!/bin/bash
+# Shortcut for YouTube Preaching Cutter
+
+# Get the directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Activate virtualenv if it exists
+if [ -d "$DIR/venv" ]; then
+    source "$DIR/venv/bin/activate"
+fi
+
+# Run the python script
+python3 "$DIR/scripts/main.py" "$@"

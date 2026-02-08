@@ -25,21 +25,22 @@ This tool automates the extraction and re-uploading of preaching segments from Y
 2. Install dependencies: `pip install -r config/requirements.txt`.
 3. Ensure your YouTube credentials are in `credentials/client_secrets.json`.
 
-### 1. Run the script (Local Cut)
-To cut a video and save it locally:
+### 1. Run and Upload (Default)
+To automatically cut, generate metadata, and upload as **unlisted**:
 ```bash
-source venv/bin/activate
-python3 scripts/main.py https://www.youtube.com/watch?v=dftum0wiBNU
+./ytcut https://www.youtube.com/watch?v=dftum0wiBNU
 ```
+*Note: The first time you run this, it will open a browser window for Google Authorization.*
 
-### 2. Cut and Upload
-To automatically generate titles/tags and upload as **unlisted**:
+### 2. Local Cut Only
+To cut a video and save it locally without uploading:
 ```bash
-python3 scripts/main.py https://www.youtube.com/watch?v=dftum0wiBNU --upload
+./ytcut https://www.youtube.com/watch?v=dftum0wiBNU --no-upload
 ```
 *Note: The first time you run this, it will open a browser window for Google Authorization.*
 
 ## Project Structure
+- `ytcut`: Executable shortcut for the tool.
 - `scripts/main.py`: Main CLI orchestration (entry point).
 - `src/`: Core logic modules.
 - `config/`: Configuration files and dependencies (`requirements.txt`, `.env`).

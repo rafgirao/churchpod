@@ -20,7 +20,7 @@ load_dotenv(PROJECT_ROOT / "config" / ".env")
 def main():
     parser = argparse.ArgumentParser(description="YouTube Preaching Cutter")
     parser.add_argument("url", help="YouTube URL of the church service")
-    parser.add_argument("--upload", action="store_true", help="Upload the cut video to YouTube")
+    parser.add_argument("--no-upload", action="store_true", help="Only cut the video locally, do not upload to YouTube")
     parser.add_argument("--title", help="Title for the uploaded video")
     parser.add_argument("--desc", help="Description for the uploaded video")
     
@@ -83,8 +83,8 @@ def main():
         return
     print(f"Cut video saved to: {cut_path}")
 
-    # 6. Upload (Optional)
-    if args.upload:
+    # 6. Upload (Default behavior, skipped if --no-upload is used)
+    if not args.no_upload:
         print(f"\n--- Step 6: Uploading to YouTube (Unlisted) ---")
         try:
             up = Uploader()

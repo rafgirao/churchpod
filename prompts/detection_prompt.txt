@@ -10,11 +10,11 @@ A pregação geralmente começa quando o pastor pede para abrir a Bíblia, cita 
 Ela termina quando ele faz o apelo, inicia a oração final ou chama o louvor de encerramento.
 
 Retorne APENAS um objeto JSON com o seguinte formato:
-{
+{{
   "start_seconds": numero,
   "end_seconds": numero,
   "reason": "breve explicação do motivo da escolha desses tempos"
-}
+}}
 
 Transcrição:
 {transcript}
