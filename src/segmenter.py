@@ -2,24 +2,26 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+from pathlib import Path
+from src.paths import PROJECT_ROOT
 
 load_dotenv()
 
 class Segmenter:
-    def __init__(self, prompts_dir="prompts"):
+    def __init__(self, prompts_dir=None):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             print("Warning: OPENAI_API_KEY not found in environment. OpenAI detection will fail.")
         self.client = OpenAI(api_key=self.api_key) if self.api_key else None
-        self.prompts_dir = prompts_dir
+        self.prompts_dir = Path(prompts_dir) if prompts_dir else PROJECT_ROOT / "prompts"
         
         # Load prompts
         self.detection_prompt_tpl = self._load_prompt("detection_prompt.txt")
         self.metadata_prompt_tpl = self._load_prompt("metadata_prompt.txt")
 
     def _load_prompt(self, filename):
-        path = os.path.join(self.prompts_dir, filename)
-        if os.path.exists(path):
+        path = self.prompts_dir / filename
+        if path.exists():
             with open(path, 'r', encoding='utf-8') as f:
                 return f.read()
         return ""

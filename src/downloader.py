@@ -1,20 +1,22 @@
 import os
 import json
 import yt_dlp
+from pathlib import Path
+from src.paths import PROJECT_ROOT
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import JSONFormatter
 
 class Downloader:
-    def __init__(self, output_dir="downloads"):
-        self.output_dir = output_dir
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+    def __init__(self, output_dir=None):
+        self.output_dir = Path(output_dir) if output_dir else PROJECT_ROOT / "downloads"
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def download_video(self, url):
         """Downloads the video in the best available format (maximum quality)."""
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
-            'outtmpl': os.path.join(self.output_dir, '%(id)s.%(ext)s'),
+            'outtmpl': str(self.output_dir / '%(id)s.%(ext)s'),
             'quiet': False,
             'nocheckcertificate': True,
             'ignoreerrors': False,
@@ -31,12 +33,12 @@ class Downloader:
                 
                 video_id = info.get('id')
                 ext = info.get('ext', 'mp4')
-                video_path = os.path.join(self.output_dir, f"{video_id}.{ext}")
+                video_path = self.output_dir / f"{video_id}.{ext}"
                 
-                if not os.path.exists(video_path):
-                    video_path = ydl.prepare_filename(info)
+                if not video_path.exists():
+                    video_path = Path(ydl.prepare_filename(info))
                 
-                return video_path, video_id
+                return str(video_path), video_id
         except Exception as e:
             print(f"Detailed Error in download_video: {e}")
             raise
@@ -65,7 +67,7 @@ class Downloader:
 
     def _save_transcript(self, video_id, data):
         """Saves transcript data to a local JSON file."""
-        transcript_path = os.path.join(self.output_dir, f"{video_id}_transcript.json")
+        transcript_path = self.output_dir / f"{video_id}_transcript.json"
         with open(transcript_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"Transcript saved to: {transcript_path}")

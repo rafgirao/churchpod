@@ -1,21 +1,21 @@
 import sys
 import argparse
 import yt_dlp
-import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Add project root to sys.path
+# Bootstrap: Add project root to sys.path before any local imports
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_dir))
 
+from src.paths import PROJECT_ROOT
 from src.downloader import Downloader
 from src.segmenter import Segmenter
 from src.cutter import Cutter
 from src.uploader import Uploader
 
 # Load .env from config
-load_dotenv(root_dir / "config" / ".env")
+load_dotenv(PROJECT_ROOT / "config" / ".env")
 
 def main():
     parser = argparse.ArgumentParser(description="YouTube Preaching Cutter")
