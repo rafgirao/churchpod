@@ -55,7 +55,7 @@ class Segmenter:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "Você é um assistente útil que analisa transcrições de vídeos de cultos de igreja."},
+                    {"role": "system", "content": "You are a helpful assistant that analyzes church service video transcripts."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={ "type": "json_object" }
@@ -96,7 +96,7 @@ class Segmenter:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "Você é um especialista em SEO de YouTube para canais de igrejas."},
+                    {"role": "system", "content": "You are a YouTube SEO expert for church channels."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={ "type": "json_object" }
