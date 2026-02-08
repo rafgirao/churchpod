@@ -17,13 +17,12 @@ class Downloader:
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
             'outtmpl': str(self.output_dir / '%(id)s.%(ext)s'),
+            'merge_output_format': 'mp4',
             'quiet': False,
             'nocheckcertificate': True,
             'ignoreerrors': False,
             'logtostderr': True,
             'fragment_retries': 10,
-            'extractor_args': {'youtube': {'player_client': ['android']}},
-            'skip_unavailable_fragments': True,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

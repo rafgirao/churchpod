@@ -17,6 +17,19 @@ from src.uploader import Uploader
 # Load .env from config
 load_dotenv(PROJECT_ROOT / "config" / ".env")
 
+def parse_time_to_seconds(time_str):
+    """Parses time in seconds or MM:SS format to seconds."""
+    try:
+        if ":" in time_str:
+            parts = time_str.split(":")
+            if len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+            elif len(parts) == 3:
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        return int(time_str)
+    except (ValueError, TypeError):
+        return None
+
 def main():
     parser = argparse.ArgumentParser(description="YouTube Preaching Cutter")
     parser.add_argument("url", help="YouTube URL of the church service")
@@ -36,36 +49,67 @@ def main():
     
     print(f"Video ID: {video_id}")
     transcript = dl.get_transcript(video_id)
-    if not transcript:
-        print("Could not retrieve transcript. Aborting.")
-        return
-    print(f"Transcript fetched successfully.")
-
-    # 2. Segment
-    print(f"\n--- Step 2: Detecting preaching segment ---")
-    seg = Segmenter()
-    start_time, end_time = seg.detect_preaching_segment(transcript)
     
-    if start_time is None or end_time is None:
-        print("Could not identify preaching segment. Aborting.")
-        return
-        
-    print(f"Found preaching segment: {start_time}s to {end_time}s")
-    print(f"Duration: {(end_time - start_time) / 60:.2f} minutes")
+    start_time, end_time = None, None
+    metadata = {}
 
-    # 3. Generate Metadata (OpenAI)
-    print(f"\n--- Step 3: Generating optimized metadata ---")
-    metadata = seg.generate_metadata(transcript, start_time, end_time)
-    if metadata:
-        print(f"Title: {metadata.get('title')}")
-        print(f"Tags: {', '.join(metadata.get('tags', []))}")
-    else:
-        print("Failed to generate metadata with OpenAI. Using defaults.")
+    if not transcript:
+        print("\n[!] Could not retrieve transcript. Entering MANUAL FALLBACK.")
+        print("Please enter the times for the preaching segment:")
+        
+        while start_time is None:
+            raw_start = input("Start time (MM:SS or seconds): ").strip()
+            start_time = parse_time_to_seconds(raw_start)
+            if start_time is None:
+                print("Invalid format. Use MM:SS (e.g., 30:00) or total seconds (e.g., 1800).")
+        
+        while end_time is None:
+            raw_end = input("End time (MM:SS or seconds): ").strip()
+            end_time = parse_time_to_seconds(raw_end)
+            if end_time is None:
+                print("Invalid format.")
+        
+        print("\nMetadata (AI cannot generate without transcript):")
+        manual_title = input(f"Video Title [Default: Preaching - {video_id}]: ").strip()
+        manual_desc = input(f"Description [Default: Segment extracted from {args.url}]: ").strip()
+        
         metadata = {
-            "title": f"Pregação - {video_id}",
-            "description": f"Trecho extraído do vídeo original: {args.url}",
-            "tags": ["igreja", "pregação", video_id]
+            "title": manual_title or f"Preaching - {video_id}",
+            "description": manual_desc or f"Segment extracted from original video: {args.url}",
+            "tags": ["church", "preaching", video_id]
         }
+    else:
+        print(f"Transcript fetched successfully.")
+
+        # 2. Segment
+        print(f"\n--- Step 2: Detecting preaching segment ---")
+        seg = Segmenter()
+        start_time, end_time = seg.detect_preaching_segment(transcript)
+        
+        if start_time is None or end_time is None:
+            print("Could not identify preaching segment automatically.")
+            # Fallback within fallback if AI fails even with transcript
+            while start_time is None:
+                start_time = parse_time_to_seconds(input("Enter start time manually (MM:SS or seconds): "))
+            while end_time is None:
+                end_time = parse_time_to_seconds(input("Enter end time manually (MM:SS or seconds): "))
+            
+        print(f"Found preaching segment: {start_time}s to {end_time}s")
+        print(f"Duration: {(end_time - start_time) / 60:.2f} minutes")
+
+        # 3. Generate Metadata (OpenAI)
+        print(f"\n--- Step 3: Generating optimized metadata ---")
+        metadata = seg.generate_metadata(transcript, start_time, end_time)
+        if metadata:
+            print(f"Title: {metadata.get('title')}")
+            print(f"Tags: {', '.join(metadata.get('tags', []))}")
+        else:
+            print("Failed to generate metadata with OpenAI. Using defaults.")
+            metadata = {
+                "title": f"Preaching - {video_id}",
+                "description": f"Segment extracted from original video: {args.url}",
+                "tags": ["church", "preaching", video_id]
+            }
 
     # 4. Download Video
     print(f"\n--- Step 4: Downloading video (Maximum Quality) ---")
@@ -75,7 +119,7 @@ def main():
     # 5. Cut
     print(f"\n--- Step 5: Cutting video ---")
     cutter = Cutter()
-    output_name = f"pregação_{video_id}.mp4"
+    output_name = f"preaching_{video_id}.mp4"
     cut_path = cutter.cut_video(video_path, start_time, end_time, output_name)
     
     if not cut_path:

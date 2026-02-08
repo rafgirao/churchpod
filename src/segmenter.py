@@ -112,7 +112,7 @@ class Segmenter:
         """Old keyword-based logic as a fallback."""
         probable_start = 0
         for entry in transcript:
-            if entry['start'] > 600 and ("bíblia" in entry['text'].lower() or "palavra" in entry['text'].lower()):
+            if entry['start'] > 600 and ("bible" in entry['text'].lower() or "word" in entry['text'].lower()):
                 probable_start = entry['start']
                 break
         probable_end = transcript[-1]['start']

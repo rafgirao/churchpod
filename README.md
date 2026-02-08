@@ -50,4 +50,4 @@ To cut a video and save it locally without uploading:
 - `cuts/`: Final output storage.
 
 ## Detection Logic
-The script uses OpenAI to identify the transition from worship to preaching by analyzing the context of the transcript, looking for biblical citations, opening of the Word, and the concluding apelo/prayer.
+The script uses OpenAI to identify the transition from worship to preaching by analyzing the context of the transcript, looking for biblical citations, opening of the Word, and the concluding appeal/prayer.
