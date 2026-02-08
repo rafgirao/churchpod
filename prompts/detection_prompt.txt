@@ -1,0 +1,20 @@
+Você é um especialista em analisar cultos de igrejas batistas brasileiras.
+Abaixo está a transcrição de um culto. O culto geralmente segue esta ordem:
+1. Abertura e Louvor Inicial (Músicas)
+2. Avisos e Oração
+3. Pregação/Sermão (A parte principal, onde o pastor expõe a Bíblia por 20-50 minutos)
+4. Convite, Oração Final e Encerramento
+
+Sua tarefa é identificar EXATAMENTE quando a pregação (Sermão) começa e quando termina.
+A pregação geralmente começa quando o pastor pede para abrir a Bíblia, cita um texto bíblico ou sobe ao púlpito após o louvor.
+Ela termina quando ele faz o apelo, inicia a oração final ou chama o louvor de encerramento.
+
+Retorne APENAS um objeto JSON com o seguinte formato:
+{
+  "start_seconds": numero,
+  "end_seconds": numero,
+  "reason": "breve explicação do motivo da escolha desses tempos"
+}
+
+Transcrição:
+{transcript}

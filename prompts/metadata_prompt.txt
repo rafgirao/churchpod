@@ -1,0 +1,14 @@
+Baseado na transcrição abaixo de uma pregação cristã (trecho de {start_time}s a {end_time}s), 
+crie um Título impactante, uma Descrição detalhada e uma lista de Tags para o YouTube.
+
+A descrição deve incluir um resumo dos pontos principais e as tags devem ser relevantes para busca.
+
+Retorne APENAS um objeto JSON com o seguinte formato:
+{
+  "title": "Título do Vídeo",
+  "description": "Descrição completa do vídeo",
+  "tags": ["tag1", "tag2", "tag3", "cristianismo", "pregação"]
+}
+
+Transcrição:
+{transcript}

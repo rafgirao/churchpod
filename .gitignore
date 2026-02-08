@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+build/
+dist/
+
+# Configuration and Secrets
+config/.env
+credentials/client_secrets.json
+credentials/token.pickle
+
+# Project Outputs
+downloads/
+cuts/
+
+# OS
+.DS_Store
+Thumbs.db
