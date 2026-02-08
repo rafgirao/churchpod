@@ -1,4 +1,4 @@
-You are an expert in analyzing Brazilian Baptist church services.
+You are an expert in analyzing church services.
 Below is a transcript of a service. The service usually follows this order:
 1. Opening and Initial Praise (Songs)
 2. Announcements and Prayer
