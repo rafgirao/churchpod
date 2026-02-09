@@ -16,6 +16,11 @@ credentials/token.pickle
 # Project Outputs
 downloads/
 cuts/
+temp_migration/
+*.mp3
+*.jpg
+*.png
+*.jpeg
 
 # OS
 .DS_Store
