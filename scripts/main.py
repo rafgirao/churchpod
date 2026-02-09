@@ -59,9 +59,22 @@ def main():
     if not video_id:
         # Fallback to heavy tool only if regex fails
         print("Could not parse ID from URL string. Falling back to yt-dlp...")
-        with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True, 'cookiesfrombrowser': ('chrome',), 'js_runtimes': {'node': {}}, 'remote_components': ['ejs:github']}) as ydl:
-            info = ydl.extract_info(args.url, download=False)
-            video_id = info.get('id')
+        ydl_opts_fallback = {
+            'quiet': True, 
+            'nocheckcertificate': True, 
+            'cookiesfrombrowser': ('chrome',), 
+            'remote_components': ['ejs:github']
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
+                info = ydl.extract_info(args.url, download=False)
+                video_id = info.get('id')
+        except Exception as e:
+            print(f"Warning: Failed to extract info with cookies ({e}). Retrying without cookies...")
+            ydl_opts_fallback.pop('cookiesfrombrowser', None)
+            with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
+                info = ydl.extract_info(args.url, download=False)
+                video_id = info.get('id')
     
     print(f"Video ID: {video_id}")
     dl = Downloader()

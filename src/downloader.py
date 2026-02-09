@@ -40,12 +40,18 @@ class Downloader:
             'quiet': True,
             'no_warnings': True,
             'cookiesfrombrowser': ('chrome',),
-            'js_runtimes': {'node': {}},
             'remote_components': ['ejs:github'],
         }
-        with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
-            info = ydl.extract_info(url, download=False)
-            video_id = info.get('id')
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+                video_id = info.get('id')
+        except Exception as e:
+            print(f"Warning: Failed to extract info with cookies ({e}). Retrying without cookies...")
+            ydl_opts_info.pop('cookiesfrombrowser', None)
+            with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+                video_id = info.get('id')
             
         # 4. Check again with the official ID (just in case)
         for ext in ['mp4', 'mkv', 'webm']:
@@ -65,7 +71,6 @@ class Downloader:
             'logtostderr': True,
             'fragment_retries': 10,
             'cookiesfrombrowser': ('chrome',),
-            'js_runtimes': {'node': {}},
             'remote_components': ['ejs:github'],
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -80,19 +85,29 @@ class Downloader:
             }
         }
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                if not info:
-                    raise Exception("Failed to extract video info.")
-                
-                video_id = info.get('id')
-                ext = info.get('ext', 'mp4')
-                video_path = self.output_dir / f"{video_id}.{ext}"
-                
-                if not video_path.exists():
-                    video_path = Path(ydl.prepare_filename(info))
-                
-                return str(video_path), video_id
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+            except Exception as e:
+                if 'Requested format is not available' in str(e) or 'format' in str(e).lower():
+                    print(f"Warning: Format error with cookies ({e}). Retrying without cookies...")
+                    ydl_opts.pop('cookiesfrombrowser', None)
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                else:
+                    raise
+
+            if not info:
+                raise Exception("Failed to extract video info.")
+            
+            video_id = info.get('id')
+            ext = info.get('ext', 'mp4')
+            video_path = self.output_dir / f"{video_id}.{ext}"
+            
+            if not video_path.exists():
+                video_path = Path(ydl.prepare_filename(info))
+            
+            return str(video_path), video_id
         except Exception as e:
             print(f"Detailed Error in download_video: {e}")
             raise
@@ -123,7 +138,6 @@ class Downloader:
                 'no_warnings': True,
                 'cookiesfrombrowser': ('chrome',),
                 'cookiefile': str(cookies_file),
-                'js_runtimes': {'node': {}},
                 'remote_components': ['ejs:github'],
             }
             
