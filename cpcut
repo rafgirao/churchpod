@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shortcut for YouTube Preaching Cutter
+# Shortcut for ChurchPod Cutter
 
 # Get the directory of this script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -8,6 +8,11 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if [ -d "$DIR/venv" ]; then
     source "$DIR/venv/bin/activate"
 fi
+
+# Pull latest changes from GitHub
+echo "Pulling latest version from GitHub..."
+cd "$DIR"
+git pull origin main
 
 # Run the python script
 python3 "$DIR/scripts/main.py" "$@"

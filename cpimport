@@ -9,5 +9,10 @@ if [ -d "$DIR/venv" ]; then
     source "$DIR/venv/bin/activate"
 fi
 
+# Pull latest changes from GitHub
+echo "Pulling latest version from GitHub..."
+cd "$DIR"
+git pull origin main
+
 # Run the python script
 python3 "$DIR/scripts/import_feed.py" "$@"
