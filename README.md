@@ -16,7 +16,7 @@
 
 ### Step 1: Install Required Software
 
-1. **Python**: Download from https://python.org (version 3.8 or higher)
+1. **Python**: Download from https://python.org (version 3.8 or higher) or via Homebrew: `brew install python`
 2. **FFmpeg**:
    - Windows: Download from https://ffmpeg.org/download.html
    - Mac: `brew install ffmpeg`
