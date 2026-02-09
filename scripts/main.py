@@ -1,4 +1,5 @@
 import sys
+import os
 import argparse
 import yt_dlp
 from pathlib import Path
@@ -41,13 +42,29 @@ def main():
 
     # 1. Get Video ID and Transcript
     print(f"--- Step 1: Fetching metadata and transcript ---")
-    dl = Downloader()
-    # Extract video ID from URL
-    with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
-        info = ydl.extract_info(args.url, download=False)
-        video_id = info.get('id')
+    
+    # Fast Extraction: Try to get ID from URL without loading heavy tools
+    import re
+    video_id = None
+    patterns = [
+        r"(?:v=|\/)([0-9A-Za-z_-]{11}).*",
+        r"be\/([0-9A-Za-z_-]{11}).*"
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, args.url)
+        if match:
+            video_id = match.group(1)
+            break
+            
+    if not video_id:
+        # Fallback to heavy tool only if regex fails
+        print("Could not parse ID from URL string. Falling back to yt-dlp...")
+        with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True, 'cookiesfrombrowser': ('chrome',), 'js_runtimes': {'node': {}}, 'remote_components': ['ejs:github']}) as ydl:
+            info = ydl.extract_info(args.url, download=False)
+            video_id = info.get('id')
     
     print(f"Video ID: {video_id}")
+    dl = Downloader()
     transcript = dl.get_transcript(video_id)
     
     start_time, end_time = None, None
@@ -116,16 +133,78 @@ def main():
     video_path, _ = dl.download_video(args.url)
     print(f"Video downloaded to: {video_path}")
 
+
+    # Optional Custom Thumbnail Prompts
+    print("\n--- Custom Thumbnails (Optional) ---")
+    thumb_podcast = input("[?] SQUARE Thumbnail (Podcast/Spotify) - drag the file here: ").strip().strip("'").strip('"')
+    thumb_youtube = input("[?] 16:9 Thumbnail (YouTube) - drag the file here: ").strip().strip("'").strip('"')
+
+    custom_thumb_podcast = thumb_podcast if thumb_podcast and os.path.exists(thumb_podcast) else None
+    custom_thumb_youtube = thumb_youtube if thumb_youtube and os.path.exists(thumb_youtube) else None
+
+    if thumb_podcast and not custom_thumb_podcast: print(f"  ⚠️ Podcast Thumb not found: {thumb_podcast}")
+    if thumb_youtube and not custom_thumb_youtube: print(f"  ⚠️ YouTube Thumb not found: {thumb_youtube}")
+
     # 5. Cut
     print(f"\n--- Step 5: Cutting video ---")
     cutter = Cutter()
-    output_name = f"preaching_{video_id}.mp4"
+    output_name = f"{video_id}.mp4"
+    # The cutter now handles skip_existing=True by default
     cut_path = cutter.cut_video(video_path, start_time, end_time, output_name)
     
     if not cut_path:
         print("Failed to cut video.")
         return
-    print(f"Cut video saved to: {cut_path}")
+    print(f"Cut video path: {cut_path}")
+
+    # 5.5 Extract MP3 (New)
+    print(f"\n--- Step 5.5: Extracting MP3 for Spotify ---")
+    mp3_name = f"{video_id}.mp3"
+    # The cutter now handles skip_existing=True by default
+    mp3_path = cutter.extract_audio(cut_path, mp3_name)
+    if mp3_path:
+        print(f"MP3 path: {mp3_path}")
+    else:
+        print("Failed to extract MP3.")
+
+    # 5.7 Storage & RSS (Hybrid: R2 for Files, Supabase for DB)
+    if mp3_path:
+        print(f"\n--- Step 5.7: Uploading to R2 & Updating Supabase DB ---")
+        try:
+            from src.podcast_manager import PodcastManager
+            manager = PodcastManager()
+            
+            # 1. Upload Square Thumbnail to R2
+            r2_thumb_url = None
+            if custom_thumb_podcast:
+                print("Uploading Square Thumbnail to Cloudflare R2...")
+                ext = custom_thumb_podcast.split('.')[-1]
+                r2_thumb_url = manager.upload_file(custom_thumb_podcast, object_name=f"{video_id}.{ext}", content_type=f'image/{ext}')
+
+            # 2. Upload MP3 to R2
+            print("Uploading MP3 to Cloudflare R2...")
+            episode_url = manager.upload_file(mp3_path, content_type='audio/mpeg')
+            
+            if episode_url:
+                print(f"MP3 uploaded to R2: {episode_url}")
+                
+                episode_data = {
+                    "title": metadata.get("title"),
+                    "description": metadata.get("description"),
+                    "url": episode_url,
+                    "duration": f"{(end_time - start_time) // 60}:{(end_time - start_time) % 60:02d}",
+                    "image": r2_thumb_url 
+                }
+                
+                # 3. Save metadata to Supabase DB (Dynamic RSS)
+                feed_url = manager.add_episode(episode_data)
+                print(f"✅ Supabase Database updated!")
+                print(f"👉 Your Dynamic RSS Feed: {feed_url}")
+            else:
+                print("❌ R2 upload failed.")
+
+        except Exception as e:
+            print(f"Error during Hybrid Storage update: {e}")
 
     # 6. Upload (Default behavior, skipped if --no-upload is used)
     if not args.no_upload:
@@ -143,6 +222,11 @@ def main():
                 tags=tags,
                 privacy_status="unlisted"
             )
+            
+            if new_video_id and custom_thumb_youtube:
+                print(f"Setting custom 16:9 thumbnail for YouTube...")
+                up.set_thumbnail(new_video_id, custom_thumb_youtube)
+
             print(f"Successfully uploaded: https://www.youtube.com/watch?v={new_video_id}")
         except Exception as e:
             print(f"Error during upload: {e}")

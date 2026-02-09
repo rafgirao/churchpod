@@ -80,6 +80,23 @@ class Uploader:
         print(f"Video uploaded successfully! Video ID: {res.get('id')}")
         return res.get('id')
 
+    def set_thumbnail(self, video_id, thumb_path):
+        """Sets a custom thumbnail for a YouTube video."""
+        if not os.path.exists(thumb_path):
+            print(f"Thumbnail file not found: {thumb_path}")
+            return False
+
+        try:
+            self.youtube.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumb_path)
+            ).execute()
+            print(f"✅ Thumbnail updated for video: {video_id}")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to set thumbnail: {e}")
+            return False
+
 if __name__ == "__main__":
     # Test would require client_secrets.json
     pass

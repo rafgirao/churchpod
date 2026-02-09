@@ -1,6 +1,6 @@
-# YouTube Preaching Cutter
+# ChurchPod 🎙️🏛️
 
-This tool automates the extraction and re-uploading of preaching segments from YouTube church service videos.
+**ChurchPod** is an AI-powered automation engine designed to transform your church's YouTube services into professional podcast episodes for Spotify and other platforms.
 
 ## Features
 - **Automatic Download**: Uses `yt-dlp` to fetch the service video in maximum quality.
