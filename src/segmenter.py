@@ -1,11 +1,9 @@
 import os
 import json
 from openai import OpenAI
-from dotenv import load_dotenv
 from pathlib import Path
 from src.paths import PROJECT_ROOT
 
-load_dotenv()
 
 class Segmenter:
     def __init__(self, prompts_dir=None):
@@ -38,7 +36,7 @@ class Segmenter:
             print("OpenAI client or prompt template missing. Falling back to heuristics.")
             return self._heuristic_fallback(transcript)
 
-        # 1. Prepare a compact version of the transcript for the LLM
+        # Prepare a compact version of the transcript for the LLM
         compact_transcript = ""
         last_minute = -1
         for entry in transcript:
@@ -58,7 +56,7 @@ class Segmenter:
                     {"role": "system", "content": "You are a helpful assistant that analyzes church service video transcripts."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={ "type": "json_object" }
+                response_format={"type": "json_object"}
             )
             
             result = json.loads(response.choices[0].message.content)
@@ -83,7 +81,7 @@ class Segmenter:
         for entry in transcript:
             if start_time <= entry['start'] <= end_time:
                 relevant_text += entry['text'] + " "
-                if len(relevant_text) > 4000: # Limit context for metadata
+                if len(relevant_text) > 4000:  # Limit context for metadata
                     break
 
         prompt = self.metadata_prompt_tpl.format(
@@ -99,7 +97,7 @@ class Segmenter:
                     {"role": "system", "content": "You are a YouTube SEO expert for church channels."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={ "type": "json_object" }
+                response_format={"type": "json_object"}
             )
             
             return json.loads(response.choices[0].message.content)
@@ -109,14 +107,20 @@ class Segmenter:
             return None
 
     def _heuristic_fallback(self, transcript):
-        """Old keyword-based logic as a fallback."""
+        """Keyword-based fallback for detecting the preaching segment."""
+        keywords = [
+            "bíblia", "palavra", "evangelho", "senhor", "jesus",
+            "bible", "word", "scripture", "lord",
+        ]
         probable_start = 0
         for entry in transcript:
-            if entry['start'] > 600 and ("bible" in entry['text'].lower() or "word" in entry['text'].lower()):
+            text_lower = entry['text'].lower()
+            if entry['start'] > 600 and any(kw in text_lower for kw in keywords):
                 probable_start = entry['start']
                 break
         probable_end = transcript[-1]['start']
         return probable_start, probable_end
+
 
 if __name__ == "__main__":
     pass

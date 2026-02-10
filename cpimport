@@ -9,14 +9,20 @@ if [ -d "$DIR/venv" ]; then
     source "$DIR/venv/bin/activate"
 fi
 
-# Pull latest changes from GitHub
-echo "Updating ChurchPod..."
-cd "$DIR"
-git pull origin main
+# Pull latest changes from GitHub (skip with --no-update)
+if [[ "$*" != *"--no-update"* ]]; then
+    echo "Updating ChurchPod..."
+    cd "$DIR"
+    git pull origin main
+    echo "Installing/Updating dependencies..."
+    python3 -m pip install -q -r "$DIR/config/requirements.txt"
+fi
 
-# Update dependencies
-echo "Installing/Updating dependencies..."
-python3 -m pip install -q -r "$DIR/config/requirements.txt"
+# Run the python script (filter out --no-update before passing args)
+ARGS=("$@")
+FILTERED_ARGS=()
+for arg in "${ARGS[@]}"; do
+    [[ "$arg" != "--no-update" ]] && FILTERED_ARGS+=("$arg")
+done
 
-# Run the python script
-python3 "$DIR/scripts/import_feed.py" "$@"
+python3 "$DIR/scripts/import_feed.py" "${FILTERED_ARGS[@]}"

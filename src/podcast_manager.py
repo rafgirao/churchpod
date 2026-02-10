@@ -2,6 +2,7 @@ import os
 from supabase import create_client, Client
 from src.r2_storage import R2Storage
 
+
 class PodcastManager:
     def __init__(self):
         self.url = os.getenv("SUPABASE_URL")
@@ -22,12 +23,8 @@ class PodcastManager:
         res = self.supabase.table("episodes").select("*").eq("title", title.strip()).execute()
         return res.data[0] if res.data else None
 
-    def episode_exists(self, title):
-        """Checks if an episode with the same title already exists in the database."""
-        return self.get_episode_by_title(title) is not None
-
     def add_episode(self, episode_data):
-        """Inserts a new episode into the Supabase database. The Edge Function handles the XML generation."""
+        """Inserts a new episode into the Supabase database."""
         # Normalize duration for the feed (HH:MM:SS)
         original_duration = episode_data.get('duration', '00:00:00')
         if ":" in original_duration and len(original_duration.split(":")) == 2:
@@ -46,7 +43,6 @@ class PodcastManager:
         if episode_data.get('pubDate'):
             data["pub_date"] = episode_data['pubDate']
 
-        # Insert into DB
         self.supabase.table("episodes").insert(data).execute()
         
         # Return the Edge Function URL as the feed link
@@ -54,7 +50,6 @@ class PodcastManager:
 
     def update_episode_metadata(self, episode_id, metadata):
         """Updates metadata for an existing episode identified by ID."""
-        from datetime import datetime
         import email.utils
 
         # Map keys to DB columns
@@ -80,9 +75,7 @@ class PodcastManager:
                 db_data[db_col] = value
 
         if not db_data:
-            return
+            return False
 
         res = self.supabase.table("episodes").update(db_data).eq("id", episode_id).execute()
-        if hasattr(res, 'data') and res.data:
-            return True
-        return False
+        return bool(hasattr(res, 'data') and res.data)

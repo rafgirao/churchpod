@@ -1,7 +1,8 @@
 import sys
 import os
-import requests
 import re
+import hashlib
+import requests
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from src.r2_storage import R2Storage
 # Load configurations
 load_dotenv(PROJECT_ROOT / "config" / ".env")
 
+
 def download_file(url, dest_path):
     """Downloads a file from a URL to a local path."""
     print(f"  Downloading: {url}")
@@ -27,6 +29,23 @@ def download_file(url, dest_path):
         return True
     print(f"  ❌ Failed to download: {response.status_code}")
     return False
+
+
+def clean_cdata(text):
+    """Strips CDATA wrappers from XML text."""
+    if not text:
+        return ""
+    return text.replace("<![CDATA[", "").replace("]]>", "").strip()
+
+
+def extract_description(item_xml):
+    """Extracts the best available description from an RSS item. Priority: description > summary > content."""
+    for tag in ['description', 'itunes:summary', 'content:encoded']:
+        match = re.search(rf'<{tag}>(.*?)</{tag}>', item_xml, re.DOTALL)
+        if match and match.group(1).strip():
+            return clean_cdata(match.group(1))
+    return ""
+
 
 def migrate_feed(old_rss_url):
     print(f"--- Starting Migration from: {old_rss_url} ---")
@@ -48,7 +67,6 @@ def migrate_feed(old_rss_url):
         return
 
     # 3. Parse items from the old RSS
-    # Using regex for items to be more resilient with namespaces
     items = re.findall(r'<item>.*?</item>', old_xml, re.DOTALL)
     print(f"Found {len(items)} episodes to migrate.")
 
@@ -58,14 +76,10 @@ def migrate_feed(old_rss_url):
     imported_count = 0
 
     for item_xml in reversed(items):  # Process from oldest to newest
-        print(f"\nProcessing episode...")
+        print("\nProcessing episode...")
         
         # Extract metadata
         title_match = re.search(r'<title>(.*?)</title>', item_xml, re.DOTALL)
-        # Try different description tags (standard, summary, content)
-        desc_match = re.search(r'<description>(.*?)</description>', item_xml, re.DOTALL)
-        summary_match = re.search(r'<itunes:summary>(.*?)</itunes:summary>', item_xml, re.DOTALL)
-        
         url_match = re.search(r'<enclosure.*?url="(.*?)"', item_xml)
         date_match = re.search(r'<pubDate>(.*?)</pubDate>', item_xml)
         duration_match = re.search(r'<itunes:duration>(.*?)</itunes:duration>', item_xml)
@@ -76,32 +90,13 @@ def migrate_feed(old_rss_url):
             print("  ⚠️ Incomplete episode data. Skipping.")
             continue
 
-        def clean_cdata(text):
-            if not text: return ""
-            return text.replace("<![CDATA[", "").replace("]]>", "").strip()
-
         title = clean_cdata(title_match.group(1))
-        
-
         old_url = url_match.group(1).replace("&amp;", "&")
         old_thumb_url = thumb_match.group(1).replace("&amp;", "&") if thumb_match else None
         pub_date = date_match.group(1) if date_match else None
         duration = duration_match.group(1) if duration_match else ""
-        
-        # Priority: Description > Summary > Content
-        desc_match = re.search(r'<description>(.*?)</description>', item_xml, re.DOTALL)
-        summary_match = re.search(r'<itunes:summary>(.*?)</itunes:summary>', item_xml, re.DOTALL)
-        content_match = re.search(r'<content:encoded>(.*?)</content:encoded>', item_xml, re.DOTALL)
-        
-        raw_description = ""
-        if desc_match and desc_match.group(1).strip():
-            raw_description = desc_match.group(1)
-        elif summary_match and summary_match.group(1).strip():
-            raw_description = summary_match.group(1)
-        elif content_match and content_match.group(1).strip():
-            raw_description = content_match.group(1)
+        description = extract_description(item_xml)
 
-        description = clean_cdata(raw_description)
         desc_preview = (description[:50] + "...") if len(description) > 50 else description
         print(f"  Migrating: {title}")
         print(f"  Description: {desc_preview} ({len(description)} chars)")
@@ -128,7 +123,6 @@ def migrate_feed(old_rss_url):
         elif guid_match:
             file_id = re.sub(r'[^a-zA-Z0-9_-]', '_', guid_match.group(1))[:30]
         else:
-            import hashlib
             file_id = hashlib.md5(title.encode()).hexdigest()[:10]
 
         local_audio_path = temp_dir / f"{file_id}.mp3"
@@ -136,22 +130,21 @@ def migrate_feed(old_rss_url):
         # 1. Download and Upload Thumbnail to R2
         new_thumb_url = None
         if old_thumb_url:
-            thumb_ext = "jpg"
-            if ".png" in old_thumb_url.lower(): thumb_ext = "png"
+            thumb_ext = "png" if ".png" in old_thumb_url.lower() else "jpg"
             local_thumb_path = temp_dir / f"{file_id}.{thumb_ext}"
             
             if download_file(old_thumb_url, local_thumb_path):
-                print(f"  Uploading Thumbnail to Cloudflare R2...")
+                print("  Uploading Thumbnail to Cloudflare R2...")
                 new_thumb_url = manager.upload_file(local_thumb_path, content_type=f'image/{thumb_ext}')
                 local_thumb_path.unlink()
 
         # 2. Download and Upload Audio to R2
         if download_file(old_url, local_audio_path):
-            print(f"  Uploading Audio to Cloudflare R2...")
+            print("  Uploading Audio to Cloudflare R2...")
             new_url = manager.upload_file(local_audio_path, content_type='audio/mpeg')
             
             if new_url:
-                print(f"  ✅ Uploaded. Updating Supabase Database...")
+                print("  ✅ Uploaded. Updating Supabase Database...")
                 episode_data = {
                     "title": title,
                     "description": description,
@@ -168,6 +161,7 @@ def migrate_feed(old_rss_url):
             print(f"  ❌ Skipping {title} due to download error.")
 
     print(f"\n✅ MIGRATION FINISHED! {imported_count} episodes processed.")
+
 
 if __name__ == "__main__":
     import argparse
