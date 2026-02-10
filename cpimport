@@ -10,9 +10,13 @@ if [ -d "$DIR/venv" ]; then
 fi
 
 # Pull latest changes from GitHub
-echo "Pulling latest version from GitHub..."
+echo "Updating ChurchPod..."
 cd "$DIR"
 git pull origin main
+
+# Update dependencies
+echo "Installing/Updating dependencies..."
+python3 -m pip install -q -r "$DIR/config/requirements.txt"
 
 # Run the python script
 python3 "$DIR/scripts/import_feed.py" "$@"

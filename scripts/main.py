@@ -170,8 +170,8 @@ def main():
         return
     print(f"Cut video path: {cut_path}")
 
-    # 5.5 Extract MP3 (New)
-    print(f"\n--- Step 5.5: Extracting MP3 for Spotify ---")
+    # 6. Extract MP3
+    print(f"\n--- Step 6: Extracting MP3 for Spotify ---")
     mp3_name = f"{video_id}.mp3"
     # The cutter now handles skip_existing=True by default
     mp3_path = cutter.extract_audio(cut_path, mp3_name)
@@ -180,9 +180,9 @@ def main():
     else:
         print("Failed to extract MP3.")
 
-    # 5.7 Storage & RSS (Hybrid: R2 for Files, Supabase for DB)
+    # 7. Storage & RSS (Hybrid: R2 for Files, Supabase for DB)
     if mp3_path:
-        print(f"\n--- Step 5.7: Uploading to R2 & Updating Supabase DB ---")
+        print(f"\n--- Step 7: Uploading to R2 & Updating Supabase DB ---")
         try:
             from src.podcast_manager import PodcastManager
             manager = PodcastManager()
@@ -219,9 +219,9 @@ def main():
         except Exception as e:
             print(f"Error during Hybrid Storage update: {e}")
 
-    # 6. Upload (Default behavior, skipped if --no-upload is used)
+    # 8. Upload to YouTube (Default behavior, skipped if --no-upload is used)
     if not args.no_upload:
-        print(f"\n--- Step 6: Uploading to YouTube (Unlisted) ---")
+        print(f"\n--- Step 8: Uploading to YouTube (Unlisted) ---")
         try:
             up = Uploader()
             title = args.title or metadata.get("title")
@@ -245,7 +245,7 @@ def main():
             print(f"Error during upload: {e}")
             print("To fix upload, ensure 'client_secrets.json' is present.")
     else:
-        print("\nSkipping upload step as requested.")
+        print("\nSkipping YouTube upload step as requested.")
 
 if __name__ == "__main__":
     main()

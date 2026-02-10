@@ -82,10 +82,6 @@ def migrate_feed(old_rss_url):
 
         title = clean_cdata(title_match.group(1))
         
-        # --- Duplicate Check ---
-        if manager.episode_exists(title):
-            print(f"  ⏭️ Skipping: '{title}' (Already exists in database)")
-            continue
 
         old_url = url_match.group(1).replace("&amp;", "&")
         old_thumb_url = thumb_match.group(1).replace("&amp;", "&") if thumb_match else None
@@ -109,6 +105,21 @@ def migrate_feed(old_rss_url):
         desc_preview = (description[:50] + "...") if len(description) > 50 else description
         print(f"  Migrating: {title}")
         print(f"  Description: {desc_preview} ({len(description)} chars)")
+
+        # --- Duplicate Check & Metadata Update ---
+        existing_episode = manager.get_episode_by_title(title)
+        if existing_episode:
+            print(f"  🔄 Episode already exists. Updating metadata (including pubDate: {pub_date})...")
+            update_data = {
+                "description": description,
+                "pubDate": pub_date,
+                "duration": duration
+            }
+            if manager.update_episode_metadata(existing_episode['id'], update_data):
+                print(f"  ✅ Correctly updated: {title}")
+            else:
+                print(f"  ❌ Failed to update metadata for: {title}")
+            continue
 
         # --- Naming Logic ---
         file_id_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]{20,})', old_url)

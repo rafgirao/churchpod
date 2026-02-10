@@ -17,10 +17,14 @@ class PodcastManager:
         """Uploads a file to Cloudflare R2 and returns its public URL."""
         return self.r2.upload_file(file_path, object_name=object_name, content_type=content_type)
 
+    def get_episode_by_title(self, title):
+        """Returns the episode record if it exists, searching by title."""
+        res = self.supabase.table("episodes").select("*").eq("title", title.strip()).execute()
+        return res.data[0] if res.data else None
+
     def episode_exists(self, title):
         """Checks if an episode with the same title already exists in the database."""
-        res = self.supabase.table("episodes").select("id").eq("title", title).execute()
-        return len(res.data) > 0
+        return self.get_episode_by_title(title) is not None
 
     def add_episode(self, episode_data):
         """Inserts a new episode into the Supabase database. The Edge Function handles the XML generation."""
@@ -39,8 +43,46 @@ class PodcastManager:
             "duration": duration,
         }
         
+        if episode_data.get('pubDate'):
+            data["pub_date"] = episode_data['pubDate']
+
         # Insert into DB
         self.supabase.table("episodes").insert(data).execute()
         
         # Return the Edge Function URL as the feed link
         return f"{self.url}/functions/v1/rss"
+
+    def update_episode_metadata(self, episode_id, metadata):
+        """Updates metadata for an existing episode identified by ID."""
+        from datetime import datetime
+        import email.utils
+
+        # Map keys to DB columns
+        db_data = {}
+        mapping = {
+            "description": "description",
+            "url": "audio_url",
+            "image": "image_url",
+            "duration": "duration",
+            "pubDate": "pub_date"
+        }
+        
+        for key, db_col in mapping.items():
+            if key in metadata and metadata[key]:
+                value = metadata[key]
+                if key == "pubDate":
+                    try:
+                        parsed_date = email.utils.parsedate_to_datetime(value)
+                        value = parsed_date.isoformat()
+                    except Exception as e:
+                        print(f"  ⚠️ Could not parse date '{value}': {e}")
+                
+                db_data[db_col] = value
+
+        if not db_data:
+            return
+
+        res = self.supabase.table("episodes").update(db_data).eq("id", episode_id).execute()
+        if hasattr(res, 'data') and res.data:
+            return True
+        return False

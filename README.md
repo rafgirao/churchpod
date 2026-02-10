@@ -1,6 +1,6 @@
 # ChurchPod 🎙️🏛️
 
-**ChurchPod** is an AI-powered tool that automatically cuts church YouTube videos into podcast episodes. It finds the preaching part, generates titles and descriptions, and uploads to YouTube and Google Drive for easy podcast distribution.
+**ChurchPod** is an AI-powered tool that automatically cuts church YouTube videos into podcast episodes. It finds the preaching part, generates titles and descriptions, and uploads to YouTube and Cloudflare R2 for easy podcast distribution.
 
 ## What It Does
 
@@ -10,9 +10,9 @@
 - Generates optimized metadata (title, description, tags)
 - Uploads the cut video to YouTube (unlisted)
 - Extracts MP3 for podcast platforms
-- Uploads to Google Drive and creates RSS feed for Spotify
+- Uploads to Cloudflare R2 and generates a Supabase RSS feed for Spotify/Apple Podcasts
 
-## Quick Start for Beginners
+## Quick Start
 
 ### Step 1: Install Required Software
 
@@ -40,35 +40,63 @@ cd churchpod
 
 2. Edit `config/.env` with your API keys (see explanations below)
 
-### Step 4: Install Dependencies
+### Step 4: Create Virtual Environment
+
+A virtual environment is highly recommended to keep dependencies isolated and allow the auto-update scripts to work correctly:
 
 ```bash
-pip install -r config/requirements.txt
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-### Step 5: Get API Keys
+### Step 5: Install Dependencies
 
-#### OpenAI API Key
+After activating the environment, install the required packages:
+
+```bash
+python3 -m pip install -r config/requirements.txt
+```
+
+### Step 6: Get OpenAI API Key
 
 - Go to https://platform.openai.com/api-keys
 - Create a new API key
 - Add it to `OPENAI_API_KEY` in your `.env` file
 
-#### YouTube API
+### Step 7: Configure YouTube API
 
 - Go to https://console.cloud.google.com/
 - Create a new project or select existing
-- Enable YouTube Data API v3
-- Create OAuth credentials (download `client_secrets.json`)
-- Place the file in `credentials/client_secrets.json`
+- Enable **YouTube Data API v3**
+- In "APIs & Services" > "OAuth consent screen", set it up as "External" and add yourself as a test user.
+- In "APIs & Services" > "Credentials", create an **OAuth 2.0 Client ID** (Type: Desktop App).
+- Download the JSON file, rename it to `client_secrets.json`, and place it in the `credentials/` folder.
 
-#### Google Drive Folder ID (Optional)
+### Step 8: Setup Cloudflare R2
 
-- Create a folder in Google Drive for podcast MP3s
-- Copy the folder ID from the URL (the long string after `/folders/`)
-- Add `SPOTIFY_DRIVE_FOLDER_ID=your_folder_id` to `.env`
+ChurchPod uses **Cloudflare R2** for hosting large media files (MP3/Images).
 
-### Step 6: Run ChurchPod
+*   Create a bucket in [Cloudflare R2](https://dash.cloudflare.com/).
+*   Enable "Public Access" or set up a Custom Domain for the bucket.
+*   Add your `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_PUBLIC_URL` to `.env`.
+
+### Step 9: Setup Supabase (Database & RSS)
+
+1.  Create a project at [supabase.com](https://supabase.com/).
+2.  **Database Setup**: Copy the content of `scripts/setup_supabase.sql` and run it in the **SQL Editor** of your Supabase dashboard.
+3.  **Install Supabase CLI**: `brew install supabase/tap/supabase`.
+4.  **Link Project**:
+    ```bash
+    supabase login
+    supabase link --project-ref <your-project-id>
+    ```
+5.  **Deploy RSS Function**:
+    ```bash
+    supabase functions deploy rss
+    ```
+6.  Your RSS feed URL will be: `https://<your-project-id>.supabase.co/functions/v1/rss`
+
+### Step 10: Run ChurchPod
 
 To cut a video and upload it:
 
@@ -87,9 +115,9 @@ For local testing (no upload):
 Your `.env` file contains API keys and settings. Here's what each one does:
 
 - **OPENAI_API_KEY**: Used for AI-powered transcript analysis and metadata generation
-- **R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL**: For Cloudflare R2 cloud storage (optional, for advanced users)
-- **SUPABASE_URL, SUPABASE_KEY**: For database storage (optional, for advanced users)
-- **SPOTIFY_DRIVE_FOLDER_ID**: Google Drive folder ID for MP3 storage and RSS feed
+- **R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL**: For Cloudflare R2 cloud storage.
+- **SUPABASE_URL, SUPABASE_KEY**: For database storage and Edge Functions.
+- **SPOTIFY_DRIVE_FOLDER_ID**: (Legacy) Google Drive folder ID for MP3 storage.
 
 Get detailed instructions for each service in the links provided in `config/.env.example`.
 
@@ -100,7 +128,9 @@ Get detailed instructions for each service in the links provided in `config/.env
 - **AI Metadata**: Creates SEO-friendly titles, descriptions, and tags
 - **Fast Cutting**: Uses FFmpeg for lossless video cutting
 - **YouTube Upload**: Posts as unlisted videos on your channel
-- **Podcast Support**: Generates MP3s and RSS feeds for Spotify
+- **Podcast Support**: Generates MP3s and RSS feeds for Spotify/Apple Podcasts
+- **Hybrid Storage**: Stores files in R2 and metadata in Supabase for high performance
+- **Dynamic RSS**: Generates an optimized podcast feed via Supabase Edge Functions
 
 ## Project Structure
 
